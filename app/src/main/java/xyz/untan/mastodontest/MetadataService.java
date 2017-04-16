@@ -5,6 +5,8 @@ import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSession;
@@ -51,7 +53,7 @@ import static xyz.untan.mastodontest.Secrets.token;
 public class MetadataService extends NotificationListenerService {
     private static final String TAG = MetadataService.class.getSimpleName();
     private final Handler _timer = new Handler();
-    private final String _tootFormat = "#nowplaying %s / %s / %s";
+    private final String _tootFormat = "#nowplaying %s / %s / %s (%s)";
     private String _lastToot;
     private RequestQueue _requestQueue;
     private MediaSessionListener _mediaSessionListener;
@@ -113,7 +115,7 @@ public class MetadataService extends NotificationListenerService {
         Log.i(TAG, "onNotificationRankingUpdate");
     }
 
-    private void makeTootReservation(@NonNull MediaMetadata metadata) {
+    private void makeTootReservation(@NonNull MediaMetadata metadata, @NonNull final String packageName) {
         // remove all pending posts of runnable
         // https://developer.android.com/reference/android/os/Handler.html#removeCallbacksAndMessages(java.lang.Object)
         _timer.removeCallbacksAndMessages(null);
@@ -131,8 +133,17 @@ public class MetadataService extends NotificationListenerService {
             return;
         }
 
-        // TODO include player app name
-        final String status = String.format(_tootFormat, title, album, artist);
+        // get player app name
+        PackageManager packageManager = getApplicationContext().getPackageManager();
+        String appName = "";
+        try {
+            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
+            appName = packageManager.getApplicationLabel(appInfo).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        final String status = String.format(_tootFormat, title, album, artist, appName);
 
         // schedule runnable to be run after delay
         // https://developer.android.com/reference/android/os/Handler.html#postDelayed(java.lang.Runnable, long)
@@ -228,7 +239,7 @@ public class MetadataService extends NotificationListenerService {
                 logMetadata(metadata);
 
                 if (isPlaying() && metadata != null) {
-                    makeTootReservation(metadata);
+                    makeTootReservation(metadata, _controller.getPackageName());
                 } else {
                     cancelAllTootReservation();
                 }
@@ -260,7 +271,7 @@ public class MetadataService extends NotificationListenerService {
             logMetadata(metadata);
 
             if (isPlaying() && metadata != null) {
-                makeTootReservation(metadata);
+                makeTootReservation(metadata, _controller.getPackageName());
             } else {
                 cancelAllTootReservation();
             }
@@ -277,7 +288,7 @@ public class MetadataService extends NotificationListenerService {
             logMetadata(metadata);
 
             if (isPlaying() && metadata != null) {
-                makeTootReservation(metadata);
+                makeTootReservation(metadata, _controller.getPackageName());
             } else {
                 cancelAllTootReservation();
             }
