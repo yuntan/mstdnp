@@ -37,16 +37,22 @@ import java.util.Map;
 import static xyz.untan.mastodontest.Secrets.host;
 import static xyz.untan.mastodontest.Secrets.token;
 
+
+// How to get currently playing song's metadata on thirdparty music player
+// Method1: IntentFilter
+//   http://stackoverflow.com/a/17002415/2707413
+//   http://stackoverflow.com/a/26376138/2707413
+//   http://stackoverflow.com/a/14536732/2707413
+// Method2: MediaSessionManager (Android 5+)
+//   http://stackoverflow.com/a/27114050/2707413
+// This app uses method2
 public class MetadataService extends NotificationListenerService {
     private final String TAG = getClass().getSimpleName();
-    //    private final Timer _timer = new Timer(true); // daemon thread
     private final Handler _timer = new Handler();
     private final Deque<TimerEntry> _timerStack = new ArrayDeque<>();
     private final String _tootFormat = "#nowplaying %s / %s / %s";
     private MediaMetadata _lastTootedMetadata;
     private RequestQueue _requestQueue;
-    //    private MediaSession _mediaSession;
-//    private final MediaControllerCallback _callback = new MediaControllerCallback();
 
     public MetadataService() {
     }
@@ -63,57 +69,10 @@ public class MetadataService extends NotificationListenerService {
 
         Log.i(TAG, "Service not started yet, initializing...");
 
-        /*Notification notification = new Notification(R.drawable.icon, getText(R.string.ticker_text),
-                System.currentTimeMillis());
-        Intent notificationIntent = new Intent(this, SettingsActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
-        notification.setLatestEventInfo(this, getText(R.string.notification_title),
-                getText(R.string.notification_message), pendingIntent);
-        startForeground(ONGOING_NOTIFICATION_ID, notification);
-*/
-//        IntentFilter intentFilter = new IntentFilter();
-//        intentFilter.addAction("com.android.music.metachanged");
-/*
-
-        _mediaSession = new MediaSession(this, TAG);
-//        MediaController mediaController = mediaSession.getController();
-        // set flags so that media session can receive callbacks
-        _mediaSession.setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS
-                | MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS);
-*/
-
-/*        MediaSession.Callback cb = new MediaSession.Callback() {
-            @Override
-            public void onPlay() {
-                super.onPlay();
-                Log.i(TAG, "Media playing started");
-                MediaController mediaController = _mediaSession.getController();
-                MediaMetadata metadata = mediaController.getMetadata();
-                if (metadata == null) {
-                    Log.i(TAG, "Failed to get metadata");
-                } else {
-                    CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
-                            artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
-                            title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
-                    if (artist == null) {
-                        artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
-                    }
-                    Log.i(TAG, String.format("album: %s, artist: %s, title: %s", album, artist, title));
-                }
-            }
-        };*/
-//        _mediaSession.setCallback(cb);
-
+        // http://stackoverflow.com/a/27114050/2707413
         MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
         ComponentName componentName = new ComponentName(this, MetadataService.class);
         mediaSessionManager.addOnActiveSessionsChangedListener(new ActiveSessionsChangedListener(), componentName);
-
-/*
-        List<MediaController> controllers = mediaSessionManager.getActiveSessions(componentName);
-        for (MediaController controller : controllers) {
-            controller.registerCallback(_callback);
-        }
-*/
     }
 
     @Override
@@ -121,8 +80,6 @@ public class MetadataService extends NotificationListenerService {
         super.onDestroy();
 
         Log.i(TAG, "finishing service...");
-
-//        _mediaSession.release();
     }
 
     private void makeTootReservation(@NonNull MediaMetadata metadata) {
@@ -181,6 +138,7 @@ public class MetadataService extends NotificationListenerService {
     private void toot(final MediaMetadata metadata) {
         Log.i(TAG, "tooting...");
 
+        // https://developer.android.com/reference/android/media/MediaMetadata.html
         CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
                 artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
                 title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
@@ -281,6 +239,7 @@ public class MetadataService extends NotificationListenerService {
         }
     }
 
+    // https://developer.android.com/reference/android/media/session/MediaController.Callback.html
     private class MediaControllerCallback extends MediaController.Callback {
         private final MediaController _controller;
 
@@ -310,7 +269,6 @@ public class MetadataService extends NotificationListenerService {
 
             Log.i(TAG, "onMetadataChanged");
             logMetadata(metadata);
-//            _controller.registerCallback(this);
 
             if (metadata != null) {
                 makeTootReservation(metadata);
@@ -322,6 +280,8 @@ public class MetadataService extends NotificationListenerService {
             super.onPlaybackStateChanged(state);
 
             Log.i(TAG, "onPlaybackStateChanged");
+
+            // https://developer.android.com/reference/android/media/session/PlaybackState.html
             int s = state.getState();
             switch (s) {
                 case PlaybackState.STATE_PAUSED:
