@@ -1,6 +1,9 @@
 package xyz.untan.mastodontest;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
@@ -15,6 +18,7 @@ import android.service.notification.StatusBarNotification;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
@@ -51,6 +55,7 @@ public class MetadataService extends NotificationListenerService {
     private String _lastToot;
     private RequestQueue _requestQueue;
     private MediaSessionListener _mediaSessionListener;
+    private final int _notifyId = 1;
 
     public MetadataService() {
     }
@@ -73,7 +78,18 @@ public class MetadataService extends NotificationListenerService {
         _mediaSessionListener = new MediaSessionListener();
         mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
 
-        // TODO show notification
+        // show notification
+        Notification.Builder mBuilder =
+                new Notification.Builder(this)
+                        .setSmallIcon(R.drawable.notification_icon)
+                        .setContentTitle(getText(R.string.app_name))
+                        .setContentText("Auto toot enabled");
+        Notification notification = mBuilder.build();
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(_notifyId, notification);
+
+        startForeground(_notifyId, notification);
     }
 
     @Override
@@ -150,19 +166,21 @@ public class MetadataService extends NotificationListenerService {
             _requestQueue = Volley.newRequestQueue(this);
         }
 
+        final Context context = this;
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, null,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
                         Log.i(TAG, "toot done");
-                        //_lastTootedMetadata = metadata;
+                        Toast.makeText(context, "Toot sent", Toast.LENGTH_SHORT).show();
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Log.i(TAG, "toot error");
+                        Toast.makeText(context, "Toot error", Toast.LENGTH_SHORT).show();
                     }
                 }) {
             @Override
@@ -174,6 +192,8 @@ public class MetadataService extends NotificationListenerService {
                 return headers;
             }
         };
+
+        Toast.makeText(this, "Tooting...", Toast.LENGTH_SHORT).show();
         _requestQueue.add(request);
     }
 
