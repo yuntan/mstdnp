@@ -28,9 +28,6 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.util.ArrayDeque;
-import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,9 +47,8 @@ import static xyz.untan.mastodontest.Secrets.token;
 public class MetadataService extends NotificationListenerService {
     private static final String TAG = MetadataService.class.getSimpleName();
     private final Handler _timer = new Handler();
-    private final Deque<TimerEntry> _timerStack = new ArrayDeque<>();
     private final String _tootFormat = "#nowplaying %s / %s / %s";
-    private MediaMetadata _lastTootedMetadata;
+    private String _lastToot;
     private RequestQueue _requestQueue;
     private MediaSessionListener _mediaSessionListener;
 
@@ -76,6 +72,8 @@ public class MetadataService extends NotificationListenerService {
         ComponentName componentName = new ComponentName(this, MetadataService.class);
         _mediaSessionListener = new MediaSessionListener();
         mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
+
+        // TODO show notification
     }
 
     @Override
@@ -100,64 +98,47 @@ public class MetadataService extends NotificationListenerService {
     }
 
     private void makeTootReservation(@NonNull MediaMetadata metadata) {
-        _timerStack.push(new TimerEntry(new Date().getTime(), metadata));
-
         // remove all pending posts of runnable
         // https://developer.android.com/reference/android/os/Handler.html#removeCallbacksAndMessages(java.lang.Object)
         _timer.removeCallbacksAndMessages(null);
+
+        // https://developer.android.com/reference/android/media/MediaMetadata.html
+        String title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE),
+                album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM),
+                artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        if (artist == null) {
+            artist = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+        }
+
+        if (album == null) {
+            // no album data means it's a video metadata
+            return;
+        }
+
+        // TODO include player app name
+        final String status = String.format(_tootFormat, title, album, artist);
 
         // schedule runnable to be run after delay
         // https://developer.android.com/reference/android/os/Handler.html#postDelayed(java.lang.Runnable, long)
         _timer.postDelayed(new Runnable() {
             @Override
             public void run() {
-                onTimer();
+                // prevent overlapping toot
+                if (_lastToot != null && status.equals(_lastToot)) {
+                    return;
+                }
+                toot(status);
+                _lastToot = status;
             }
         }, 15000);
     }
 
     private void cancelAllTootReservation() {
         _timer.removeCallbacksAndMessages(null);
-        _timerStack.clear();
     }
 
-    private void onTimer() {
-        Log.i(TAG, "onTimer");
-
-        // return null if stack is empty
-        TimerEntry entry = _timerStack.poll();
-        _timerStack.clear();
-//        _timer.purge();
-        _timer.removeCallbacksAndMessages(null);
-
-        if (entry == null) {
-            return;
-        }
-        MediaMetadata metadata = entry.metadata;
-
-        Log.i(TAG, "  metadata.title: " + metadata.getText(MediaMetadata.METADATA_KEY_TITLE));
-        if (_lastTootedMetadata != null)
-            Log.i(TAG, "  last.title:     " + _lastTootedMetadata.getText(MediaMetadata.METADATA_KEY_TITLE));
-        if ((_lastTootedMetadata != null && !metadata.getString(MediaMetadata.METADATA_KEY_TITLE).equals(_lastTootedMetadata.getString(MediaMetadata.METADATA_KEY_TITLE)))
-                || _lastTootedMetadata == null) {
-            toot(metadata);
-            _lastTootedMetadata = metadata;
-        }
-    }
-
-    private void toot(final MediaMetadata metadata) {
+    private void toot(final String status) {
         Log.i(TAG, "tooting...");
-
-        // https://developer.android.com/reference/android/media/MediaMetadata.html
-        CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
-                artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
-                title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
-        if (artist == null) {
-            artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
-        }
-
-        String status = String.format(_tootFormat, title, album, artist);
-        // TODO player app name
         String url = null;
         try {
             url = "https://" + host + "/api/v1/statuses?status=" + URLEncoder.encode(status, "UTF-8");
@@ -165,7 +146,6 @@ public class MetadataService extends NotificationListenerService {
             e.printStackTrace();
         }
 
-//        RequestQueue queue = Volley.newRequestQueue(this);
         if (_requestQueue == null) {
             _requestQueue = Volley.newRequestQueue(this);
         }
@@ -215,7 +195,7 @@ public class MetadataService extends NotificationListenerService {
             }
 
             if (controllers.size() > 0) {
-                if (_controller!=null){
+                if (_controller != null) {
                     _controller.unregisterCallback(this);
                 }
                 _controller = controllers.get(0);
@@ -352,7 +332,7 @@ public class MetadataService extends NotificationListenerService {
 
     private static void logMetadata(@Nullable MediaMetadata metadata) {
         if (metadata == null) {
-            Log.i(TAG, "Failed to get metadata");
+            Log.i(TAG, "  no metadata");
             return;
         }
 
@@ -362,16 +342,11 @@ public class MetadataService extends NotificationListenerService {
         if (artist == null) {
             artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
         }
-        Log.i(TAG, String.format("  album: %s, artist: %s, title: %s", album, artist, title));
-    }
-
-    private class TimerEntry {
-        final long timestamp;
-        final MediaMetadata metadata;
-
-        TimerEntry(long timestamp, MediaMetadata metadata) {
-            this.timestamp = timestamp;
-            this.metadata = metadata;
-        }
+        Log.i(TAG, String.format("  album: %s, artist: %s, album artist: %s, title: %s, display title: %s",
+                metadata.getString(MediaMetadata.METADATA_KEY_ALBUM),
+                metadata.getString(MediaMetadata.METADATA_KEY_ARTIST),
+                metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST),
+                metadata.getString(MediaMetadata.METADATA_KEY_TITLE),
+                metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)));
     }
 }
