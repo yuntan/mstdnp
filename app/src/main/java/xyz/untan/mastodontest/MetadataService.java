@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -47,12 +48,13 @@ import static xyz.untan.mastodontest.Secrets.token;
 //   http://stackoverflow.com/a/27114050/2707413
 // This app uses method2
 public class MetadataService extends NotificationListenerService {
-    private final String TAG = getClass().getSimpleName();
+    private static final String TAG = MetadataService.class.getSimpleName();
     private final Handler _timer = new Handler();
     private final Deque<TimerEntry> _timerStack = new ArrayDeque<>();
     private final String _tootFormat = "#nowplaying %s / %s / %s";
     private MediaMetadata _lastTootedMetadata;
     private RequestQueue _requestQueue;
+    private MediaSessionListener _mediaSessionListener;
 
     public MetadataService() {
     }
@@ -72,7 +74,8 @@ public class MetadataService extends NotificationListenerService {
         // http://stackoverflow.com/a/27114050/2707413
         MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
         ComponentName componentName = new ComponentName(this, MetadataService.class);
-        mediaSessionManager.addOnActiveSessionsChangedListener(new ActiveSessionsChangedListener(), componentName);
+        _mediaSessionListener = new MediaSessionListener();
+        mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
     }
 
     @Override
@@ -82,15 +85,22 @@ public class MetadataService extends NotificationListenerService {
         Log.i(TAG, "finishing service...");
     }
 
+    @Override
+    public void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap) {
+        super.onNotificationPosted(sbn, rankingMap);
+
+        Log.i(TAG, "onNotificationPosted");
+    }
+
+    @Override
+    public void onNotificationRankingUpdate(RankingMap rankingMap) {
+        super.onNotificationRankingUpdate(rankingMap);
+
+        Log.i(TAG, "onNotificationRankingUpdate");
+    }
+
     private void makeTootReservation(@NonNull MediaMetadata metadata) {
         _timerStack.push(new TimerEntry(new Date().getTime(), metadata));
-//        _timer.purge();
-//        _timer.schedule(new TimerTask() {
-//            @Override
-//            public void run() {
-//                onTimer();
-//            }
-//        }, 15000);
 
         // remove all pending posts of runnable
         // https://developer.android.com/reference/android/os/Handler.html#removeCallbacksAndMessages(java.lang.Object)
@@ -187,7 +197,11 @@ public class MetadataService extends NotificationListenerService {
         _requestQueue.add(request);
     }
 
-    private class ActiveSessionsChangedListener implements MediaSessionManager.OnActiveSessionsChangedListener {
+    // https://developer.android.com/reference/android/media/session/MediaController.Callback.html
+    private class MediaSessionListener extends MediaController.Callback
+            implements MediaSessionManager.OnActiveSessionsChangedListener {
+        private MediaController _controller;
+
         @Override
         public void onActiveSessionsChanged(@Nullable List<MediaController> controllers) {
             Log.i(TAG, "onActiveSessionsChanged");
@@ -198,53 +212,27 @@ public class MetadataService extends NotificationListenerService {
             Log.i(TAG, "  Active sessions:");
             for (MediaController controller : controllers) {
                 Log.i(TAG, "    " + controller.getPackageName());
-//                controller.unregisterCallback(_callback);
-//                controller.registerCallback(_callback);
             }
+
             if (controllers.size() > 0) {
-                MediaController controller = controllers.get(0);
-                controller.registerCallback(new MediaControllerCallback(controller));
-
-                MediaMetadata metadata = controller.getMetadata();
-
-                if (metadata == null) {
-                    return;
+                if (_controller!=null){
+                    _controller.unregisterCallback(this);
                 }
-                CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
-                        artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
-                        title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
-                if (artist == null) {
-                    artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
-                }
-                Log.i(TAG, String.format("  album: %s, artist: %s, title: %s", album, artist, title));
+                _controller = controllers.get(0);
+                _controller.registerCallback(this);
 
-                PlaybackState playbackState = controller.getPlaybackState();
-                int state = 0;
-                if (playbackState != null) {
-                    state = playbackState.getState();
-                }
-                switch (state) {
-                    case PlaybackState.STATE_PLAYING:
-                        Log.i(TAG, "  state: playing");
-                        makeTootReservation(metadata);
-                        break;
-                    case PlaybackState.STATE_PAUSED:
-                        Log.i(TAG, "  state: paused");
-                        break;
-                    case PlaybackState.STATE_STOPPED:
-                        Log.i(TAG, "  state: stopped");
-                        break;
+                Log.i(TAG, "  Current session: " + _controller.getPackageName());
+                logState();
+
+                MediaMetadata metadata = _controller.getMetadata();
+                logMetadata(metadata);
+
+                if (isPlaying() && metadata != null) {
+                    makeTootReservation(metadata);
+                } else {
+                    cancelAllTootReservation();
                 }
             }
-        }
-    }
-
-    // https://developer.android.com/reference/android/media/session/MediaController.Callback.html
-    private class MediaControllerCallback extends MediaController.Callback {
-        private final MediaController _controller;
-
-        MediaControllerCallback(MediaController controller) {
-            _controller = controller;
         }
 
         @Override
@@ -268,10 +256,13 @@ public class MetadataService extends NotificationListenerService {
             super.onMetadataChanged(metadata);
 
             Log.i(TAG, "onMetadataChanged");
+            logState();
             logMetadata(metadata);
 
-            if (metadata != null) {
+            if (isPlaying() && metadata != null) {
                 makeTootReservation(metadata);
+            } else {
+                cancelAllTootReservation();
             }
         }
 
@@ -280,25 +271,16 @@ public class MetadataService extends NotificationListenerService {
             super.onPlaybackStateChanged(state);
 
             Log.i(TAG, "onPlaybackStateChanged");
-
-            // https://developer.android.com/reference/android/media/session/PlaybackState.html
-            int s = state.getState();
-            switch (s) {
-                case PlaybackState.STATE_PAUSED:
-                    Log.i(TAG, "  -> paused");
-                    cancelAllTootReservation();
-                    break;
-                case PlaybackState.STATE_PLAYING:
-                    Log.i(TAG, "  -> playing");
-                    break;
-                case PlaybackState.STATE_STOPPED:
-                    Log.i(TAG, "  -> stopped");
-                    cancelAllTootReservation();
-                    break;
-            }
+            logState();
 
             MediaMetadata metadata = _controller.getMetadata();
             logMetadata(metadata);
+
+            if (isPlaying() && metadata != null) {
+                makeTootReservation(metadata);
+            } else {
+                cancelAllTootReservation();
+            }
         }
 
         @Override
@@ -318,20 +300,69 @@ public class MetadataService extends NotificationListenerService {
             logMetadata(_controller.getMetadata());
         }
 
-        private void logMetadata(@Nullable MediaMetadata metadata) {
-            if (metadata == null) {
-                Log.i(TAG, "Failed to get metadata");
+        @Override
+        public void onSessionEvent(@NonNull String event, @Nullable Bundle extras) {
+            super.onSessionEvent(event, extras);
+
+            Log.i(TAG, "onSessionEvent event: " + event);
+        }
+
+        @Override
+        public void onSessionDestroyed() {
+            super.onSessionDestroyed();
+
+            Log.i(TAG, "onSessionDestroyed");
+//            _controller = null;
+        }
+
+        private boolean isPlaying() {
+            if (_controller == null) {
+                return false;
+            }
+            PlaybackState state = _controller.getPlaybackState();
+            return state != null && state.getState() == PlaybackState.STATE_PLAYING;
+        }
+
+        private void logState() {
+            if (_controller == null) {
+                return;
+            }
+            PlaybackState state = _controller.getPlaybackState();
+            if (state == null) {
                 return;
             }
 
-            CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
-                    artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
-                    title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
-            if (artist == null) {
-                artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+            // https://developer.android.com/reference/android/media/session/PlaybackState.html
+            switch (state.getState()) {
+                case PlaybackState.STATE_PAUSED:
+                    Log.i(TAG, "  state: paused");
+                    break;
+                case PlaybackState.STATE_PLAYING:
+                    Log.i(TAG, "  state: playing");
+                    break;
+                case PlaybackState.STATE_STOPPED:
+                    Log.i(TAG, "  state: stopped");
+                    break;
+                default:
+                    Log.i(TAG, "  state: other state");
+                    break;
             }
-            Log.i(TAG, String.format("  album: %s, artist: %s, title: %s", album, artist, title));
         }
+    }
+
+    private static void logMetadata(@Nullable MediaMetadata metadata) {
+        if (metadata == null) {
+            Log.i(TAG, "Failed to get metadata");
+            return;
+        }
+
+        CharSequence album = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM),
+                artist = metadata.getText(MediaMetadata.METADATA_KEY_ARTIST),
+                title = metadata.getText(MediaMetadata.METADATA_KEY_TITLE);
+        if (artist == null) {
+            artist = metadata.getText(MediaMetadata.METADATA_KEY_ALBUM_ARTIST);
+        }
+        Log.i(TAG, String.format("  album: %s, artist: %s, title: %s", album, artist, title));
     }
 
     private class TimerEntry {
