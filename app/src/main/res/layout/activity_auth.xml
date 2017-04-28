@@ -8,7 +8,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="xyz.untan.mastodontest.AuthActivity">
+    tools:context="xyz.untan.mstdnp.AuthActivity">
 
     <!-- Login progress -->
     <ProgressBar

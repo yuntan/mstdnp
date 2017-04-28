@@ -1,4 +1,4 @@
-package xyz.untan.mastodontest;
+package xyz.untan.mstdnp;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -16,30 +16,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.service.notification.NotificationListenerService;
-import android.service.notification.StatusBarNotification;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
-import static xyz.untan.mastodontest.Secrets.host;
-import static xyz.untan.mastodontest.Secrets.token;
 
 
 // How to get currently playing song's metadata on thirdparty music player

@@ -1,4 +1,4 @@
-package xyz.untan.mastodontest;
+package xyz.untan.mstdnp;
 
 import com.os.operando.garum.annotations.DefaultBoolean;
 import com.os.operando.garum.annotations.Pref;

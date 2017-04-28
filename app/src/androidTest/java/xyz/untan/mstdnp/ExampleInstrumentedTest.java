@@ -1,4 +1,4 @@
-package xyz.untan.mastodontest;
+package xyz.untan.mstdnp;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
