@@ -130,7 +130,7 @@ public class AuthActivity extends AppCompatActivity {
 
     void showErrorToast() {
         // TODO custom style
-        Toast.makeText(this, "ERROR", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, R.string.error_auth_failed, Toast.LENGTH_LONG).show();
     }
 }
 
