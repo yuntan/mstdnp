@@ -58,14 +58,11 @@ public class MetadataService extends NotificationListenerService {
     private RequestQueue _requestQueue;
     private MediaSessionListener _mediaSessionListener;
     private final int _notifyId = 1;
-
-    public MetadataService() {
-    }
+    private AppStatus _appStatus;
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
@@ -74,6 +71,10 @@ public class MetadataService extends NotificationListenerService {
 
         Log.i(TAG, "Service not started yet, initializing...");
 
+        // initialize members
+        _requestQueue = Volley.newRequestQueue(this);
+        _appStatus=new AppStatus();
+
         // http://stackoverflow.com/a/27114050/2707413
         MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
         ComponentName componentName = new ComponentName(this, MetadataService.class);
@@ -81,6 +82,7 @@ public class MetadataService extends NotificationListenerService {
         mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
 
         // show notification
+        // TODO add enable/disable button
         Notification.Builder mBuilder =
                 new Notification.Builder(this)
                         .setSmallIcon(R.drawable.notification_icon)
@@ -99,20 +101,6 @@ public class MetadataService extends NotificationListenerService {
         super.onDestroy();
 
         Log.i(TAG, "finishing service...");
-    }
-
-    @Override
-    public void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap) {
-        super.onNotificationPosted(sbn, rankingMap);
-
-        Log.i(TAG, "onNotificationPosted");
-    }
-
-    @Override
-    public void onNotificationRankingUpdate(RankingMap rankingMap) {
-        super.onNotificationRankingUpdate(rankingMap);
-
-        Log.i(TAG, "onNotificationRankingUpdate");
     }
 
     private void makeTootReservation(@NonNull MediaMetadata metadata, @NonNull final String packageName) {
@@ -166,20 +154,9 @@ public class MetadataService extends NotificationListenerService {
 
     private void toot(final String status) {
         Log.i(TAG, "tooting...");
-        String url = null;
-        try {
-            url = "https://" + host + "/api/v1/statuses?status=" + URLEncoder.encode(status, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-        if (_requestQueue == null) {
-            _requestQueue = Volley.newRequestQueue(this);
-        }
 
         final Context context = this;
-        JsonObjectRequest request = new JsonObjectRequest(
-                Request.Method.POST, url, null,
+        MastodonApi.toot(_requestQueue,_appStatus.instanceHost,_appStatus.accessToken,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
@@ -193,19 +170,10 @@ public class MetadataService extends NotificationListenerService {
                         Log.i(TAG, "toot error");
                         Toast.makeText(context, "Toot error", Toast.LENGTH_SHORT).show();
                     }
-                }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> headers = super.getHeaders();
-                // copy map
-                headers = new HashMap<>(headers);
-                headers.put("Authorization", "Bearer " + token);
-                return headers;
-            }
-        };
+                },status);
 
+        // TODO custom toast style
         Toast.makeText(this, "Tooting...", Toast.LENGTH_SHORT).show();
-        _requestQueue.add(request);
     }
 
     // https://developer.android.com/reference/android/media/session/MediaController.Callback.html
