@@ -2,9 +2,12 @@ package xyz.untan.mstdnp;
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.media.MediaMetadata;
@@ -15,6 +18,7 @@ import android.media.session.PlaybackState;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.service.notification.NotificationListenerService;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -39,7 +43,8 @@ import java.util.List;
 // Method2: MediaSessionManager (Android 5+)
 //   http://stackoverflow.com/a/27114050/2707413
 // This app uses method2
-public class MetadataService extends NotificationListenerService {
+public class MetadataService extends NotificationListenerService
+        implements SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = MetadataService.class.getSimpleName();
     private final Handler _timer = new Handler();
     private final String _tootFormat = "#nowplaying %s / %s / %s (%s)";
@@ -62,7 +67,7 @@ public class MetadataService extends NotificationListenerService {
 
         // initialize members
         _requestQueue = Volley.newRequestQueue(this);
-        _appStatus=new AppStatus();
+        _appStatus = new AppStatus();
 
         // http://stackoverflow.com/a/27114050/2707413
         MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
@@ -70,19 +75,10 @@ public class MetadataService extends NotificationListenerService {
         _mediaSessionListener = new MediaSessionListener();
         mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
 
-        // show notification
-        // TODO add enable/disable button
-        Notification.Builder mBuilder =
-                new Notification.Builder(this)
-                        .setSmallIcon(R.drawable.notification_icon)
-                        .setContentTitle(getText(R.string.app_name))
-                        .setContentText("Auto toot enabled");
-        Notification notification = mBuilder.build();
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(_notifyId, notification);
+        startForeground(_notifyId, updateNotification());
 
-        startForeground(_notifyId, notification);
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .registerOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -90,6 +86,52 @@ public class MetadataService extends NotificationListenerService {
         super.onDestroy();
 
         Log.i(TAG, "finishing service...");
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        updateNotification();
+    }
+
+    private Notification updateNotification() {
+        boolean enabled = PreferenceManager.getDefaultSharedPreferences(this)
+                .getBoolean(SettingsActivity.KEY_ENABLED, true);
+
+        // show notification
+        Notification.Builder builder = new Notification.Builder(this)
+                .setSmallIcon(R.drawable.notification_icon)
+                .setContentTitle(getText(enabled
+                        ? R.string.notify_title_enabled
+                        : R.string.notify_title_disabled))
+                .setContentText(getText(R.string.notify_text));
+
+        // tap to open settings activity
+        Intent intent = new Intent(this, SettingsActivity.class);
+        PendingIntent pendingIntent = TaskStackBuilder.create(this)
+                .addNextIntent(intent)
+                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(pendingIntent);
+
+        // add button to enable/disable auto toot
+        intent = new Intent(this, AutoTootPrefReceiver.class)
+                .putExtra(enabled ? "disable" : "enable", true);
+        pendingIntent = TaskStackBuilder.create(this)
+                .addNextIntent(intent)
+                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification.Action action = new Notification.Action.Builder(
+                R.drawable.notification_icon,
+                getText(enabled ? R.string.action_disable : R.string.action_enable),
+                pendingIntent).build();
+        builder.addAction(action);
+
+        Notification notification = builder.build();
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(_notifyId, notification);
+        return notification;
     }
 
     private void makeTootReservation(@NonNull MediaMetadata metadata, @NonNull final String packageName) {
@@ -142,28 +184,38 @@ public class MetadataService extends NotificationListenerService {
     }
 
     private void toot(final String status) {
+        SharedPreferences preference = PreferenceManager.getDefaultSharedPreferences(this);
+
+        if (!preference.getBoolean(SettingsActivity.KEY_ENABLED, true)) {
+            return; // auto toot not enabled
+        }
+
+        String scope = preference.getString(SettingsActivity.KEY_SCOPE, "unlisted");
+
         Log.i(TAG, "tooting...");
 
-        final Context context = this;
-        MastodonApi.toot(_requestQueue,_appStatus.instanceHost,_appStatus.accessToken,
+        MastodonApi.toot(_requestQueue, _appStatus.instanceHost, _appStatus.accessToken,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
                         Log.i(TAG, "toot done");
-                        Toast.makeText(context, "Toot sent", Toast.LENGTH_SHORT).show();
+                        // TODO custom style
+                        Toast.makeText(MetadataService.this, R.string.message_toot_sent, Toast.LENGTH_SHORT).show();
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Log.i(TAG, "toot error");
-                        Toast.makeText(context, "Toot error", Toast.LENGTH_SHORT).show();
+                        // TODO custom style
+                        Toast.makeText(MetadataService.this, R.string.error_toot_failed, Toast.LENGTH_SHORT).show();
                     }
-                },status);
+                }, status, scope);
 
         // TODO custom toast style
-        Toast.makeText(this, "Tooting...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.message_tooting, Toast.LENGTH_SHORT).show();
     }
+
 
     // https://developer.android.com/reference/android/media/session/MediaController.Callback.html
     private class MediaSessionListener extends MediaController.Callback

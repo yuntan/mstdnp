@@ -15,36 +15,36 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name="xyz.untan.mstdnp.AuthActivity"
+            android:name=".AuthActivity"
             android:label="@string/title_activity_main">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!--open app from browser-->
-            <!--mstdnp://authorize?code=XXX-->
+            <!-- open app from browser -->
+            <!-- mstdnp://authorize?code=XXX -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mstdnp" android:host="authorize" />
+                <data
+                    android:host="authorize"
+                    android:scheme="mstdnp" />
             </intent-filter>
         </activity>
 
-        <activity
-            android:name="xyz.untan.mstdnp.SettingsActivity">
-        </activity>
+        <activity android:name=".SettingsActivity" />
 
         <service
-            android:name="xyz.untan.mstdnp.MetadataService"
+            android:name=".MetadataService"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
 
+        <receiver android:name=".AutoTootPrefReceiver" />
     </application>
 
 </manifest>

@@ -53,6 +53,7 @@ public class AuthActivity extends AppCompatActivity {
             onIntentCallback(uri);
         } else if (_appStatus.accessToken != null && !_appStatus.accessToken.isEmpty()) {
             startActivity(new Intent(this, SettingsActivity.class));
+            finish(); // don't show this activity
         }
     }
 
@@ -84,6 +85,7 @@ public class AuthActivity extends AppCompatActivity {
                         _appStatus.save();
 
                         startActivity(new Intent(AuthActivity.this, SettingsActivity.class));
+                        finish(); // don't show this activity
                     }
                 }, new Response.ErrorListener() {
                     @Override

@@ -1,0 +1,15 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="true"
+        android:key="enabled"
+        android:title="@string/pref_title_enabled" />
+    <ListPreference
+        android:defaultValue="unlisted"
+        android:dependency="enabled"
+        android:entries="@array/pref_scope_entries"
+        android:entryValues="@array/pref_scope_values"
+        android:key="scope"
+        android:title="@string/pref_title_scope" />
+
+</PreferenceScreen>

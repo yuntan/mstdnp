@@ -32,27 +32,13 @@ class MastodonApi {
     }
 
     static Intent getAuthorizeIntent(String host, String clientId) {
-        String uri= "https://" + host + "/oauth/authorize"
+        String uri = "https://" + host + "/oauth/authorize"
                 + "?client_id=" + clientId
                 + "&response_type=code"
                 + "&redirect_uri=mstdnp%3A%2F%2Fauthorize"
                 + "&scope=write";
         return new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
     }
-    /*
-    static void authorizeApp(
-            RequestQueue queue, String host, String clientId, String clientSecret,
-            Response.Listener<JSONObject> listener, Response.ErrorListener errListener) {
-        String url = "https://" + host + "/oauth/authorize"
-                + "?client_id=" + clientId
-                + "&response_type=code"
-                + "&redirect_uri=mstdnp%3A%2F%2Fmstdnp";
-
-        JsonObjectRequest request = new JsonObjectRequest(
-                Request.Method.POST, url, null, listener, errListener);
-        queue.add(request);
-    }
-    */
 
     static void getToken(
             RequestQueue queue, String host, String clientId, String clientSecret, String code,
@@ -73,14 +59,16 @@ class MastodonApi {
     static void toot(
             RequestQueue queue, String host, final String token,
             Response.Listener<JSONObject> listener, Response.ErrorListener errListener,
-            final String status) {
+            final String status, final String visibility) {
         String encodedStatus = null;
         try {
             encodedStatus = URLEncoder.encode(status, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
-        String url = "https://" + host + "/api/v1/statuses?status=" + encodedStatus;
+        String url = "https://" + host + "/api/v1/statuses"
+                + "?status=" + encodedStatus
+                + "&visibility=" + visibility;
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, null, listener, errListener) {

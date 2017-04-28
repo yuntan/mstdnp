@@ -8,9 +8,6 @@ import com.os.operando.garum.models.PrefModel;
 
 @Pref(name = "app_status")
 class AppStatus extends PrefModel{
-    @PrefKey@DefaultBoolean(true)
-    boolean enabled;
-
     @PrefKey
     String instanceHost;
 
