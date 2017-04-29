@@ -1,5 +1,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--<Preference-->
+        <!--android:key="setting_intent"-->
+        <!--android:title="Additional setting required"-->
+        <!--android:summary="Tap here and grant mstdnp to access to notification">-->
+        <!--&lt;!&ndash;<intent android:action="Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"/>&ndash;&gt;-->
+    <!--</Preference>-->
     <SwitchPreference
         android:defaultValue="true"
         android:key="enabled"

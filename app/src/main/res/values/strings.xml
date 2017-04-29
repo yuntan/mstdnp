@@ -12,6 +12,9 @@
     <string name="message_tooting">Tooting…</string>
     <string name="message_toot_sent">Toot sent</string>
     <string name="error_toot_failed">Toot error</string>
+    <string name="title_open_setting">Additional setting required</string>
+    <string name="message_open_setting">Grant mstdnp to access to notification</string>
+    <string name="action_open_setting">go setting</string>
 
     <!-- notification -->
     <string name="notify_title_enabled">Auto toot enabled</string>

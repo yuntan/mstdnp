@@ -19,4 +19,7 @@ class AppStatus extends PrefModel{
 
     @PrefKey
     String accessToken;
+
+    @PrefKey@DefaultBoolean(false)
+    boolean permissionCheckCompleted;
 }

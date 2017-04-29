@@ -22,6 +22,7 @@ import android.preference.PreferenceManager;
 import android.service.notification.NotificationListenerService;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -33,6 +34,7 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.Set;
 
 
 // How to get currently playing song's metadata on thirdparty music player
@@ -55,30 +57,49 @@ public class MetadataService extends NotificationListenerService
     private AppStatus _appStatus;
 
     @Override
-    public IBinder onBind(Intent intent) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
     public void onCreate() {
         super.onCreate();
 
+        Log.i(TAG, "onCreate");
         Log.i(TAG, "Service not started yet, initializing...");
 
         // initialize members
         _requestQueue = Volley.newRequestQueue(this);
         _appStatus = new AppStatus();
 
-        // http://stackoverflow.com/a/27114050/2707413
-        MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
-        ComponentName componentName = new ComponentName(this, MetadataService.class);
-        _mediaSessionListener = new MediaSessionListener();
-        mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
-
-        startForeground(_notifyId, updateNotification());
-
         PreferenceManager.getDefaultSharedPreferences(this)
                 .registerOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.i(TAG, "onBind");
+        return super.onBind(intent);
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.i(TAG, "onUnbind");
+        return super.onUnbind(intent);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.i(TAG, "onStartCommand");
+
+        if (checkPermission()) {
+            Log.i(TAG, "permission GRANTED");
+            registerListener();
+            startForeground(_notifyId, updateNotification());
+            _appStatus.permissionCheckCompleted = true;
+            _appStatus.save();
+        } else {
+            Log.i(TAG, "permission DENIED");
+            _appStatus.permissionCheckCompleted = false;
+            _appStatus.save();
+        }
+
+        return START_STICKY;
     }
 
     @Override
@@ -93,6 +114,40 @@ public class MetadataService extends NotificationListenerService
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
         updateNotification();
+    }
+
+    private boolean checkPermission() {
+        // not works
+        /*
+        int check = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE);
+
+        switch (check) {
+            case PackageManager.PERMISSION_GRANTED:
+                return true;
+            case PackageManager.PERMISSION_DENIED:
+            default:
+                return false;
+        }
+        */
+
+        // http://stackoverflow.com/a/21392852/2707413
+        boolean found = false;
+        Set<String> set = NotificationManagerCompat.getEnabledListenerPackages(this);
+        for (String packageName : set) {
+            if (packageName.equals(getApplicationContext().getPackageName())) {
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    private void registerListener() {
+        // http://stackoverflow.com/a/27114050/2707413
+        MediaSessionManager mediaSessionManager = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
+        ComponentName componentName = new ComponentName(this, MetadataService.class);
+        _mediaSessionListener = new MediaSessionListener();
+        mediaSessionManager.addOnActiveSessionsChangedListener(_mediaSessionListener, componentName);
     }
 
     private Notification updateNotification() {
