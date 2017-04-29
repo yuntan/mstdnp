@@ -13,7 +13,10 @@
    version="1.1"
    id="svg30"
    sodipodi:docname="launcher.svg"
-   inkscape:version="0.92.0 r">
+   inkscape:version="0.92.0 r"
+   inkscape:export-filename="/home/yuntan/.local/src/github.com/yuntan/mstdnp/launcher.svg.png"
+   inkscape:export-xdpi="49.150002"
+   inkscape:export-ydpi="49.150002">
   <metadata
      id="metadata36">
     <rdf:RDF>
@@ -22,7 +25,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -42,7 +45,7 @@
      id="namedview32"
      showgrid="true"
      inkscape:zoom="0.57982755"
-     inkscape:cx="415.88354"
+     inkscape:cx="463.99012"
      inkscape:cy="554.26726"
      inkscape:window-x="51"
      inkscape:window-y="26"

@@ -72,8 +72,9 @@ public class AuthActivity extends AppCompatActivity {
         if (uri != null) { // callback
             onIntentCallback(uri);
         } else if (_appStatus.accessToken != null && !_appStatus.accessToken.isEmpty()) {
+            // authorization already done
             startActivity(new Intent(this, SettingsActivity.class));
-            finish(); // don't show this activity
+            finish(); // don't show this activity when back button pressed
         }
     }
 
@@ -105,7 +106,7 @@ public class AuthActivity extends AppCompatActivity {
                         _appStatus.save();
 
                         startActivity(new Intent(AuthActivity.this, SettingsActivity.class));
-                        finish(); // don't show this activity
+                        finish(); // don't show this activity when back button pressed
                     }
                 }, new Response.ErrorListener() {
                     @Override
@@ -141,6 +142,7 @@ public class AuthActivity extends AppCompatActivity {
 
                 // open browser
                 startActivity(MastodonApi.getAuthorizeIntent(host, clientId));
+                finish(); // don't show this activity when back button pressed
             }
         }, new Response.ErrorListener() {
             @Override
