@@ -1,5 +1,6 @@
 package xyz.untan.mstdnp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -7,6 +8,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -46,6 +48,11 @@ public class AuthActivity extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_NEXT) {
+                    // FIXME WHY FUCKING KEYBOARD DIDN'T HIDDEN????
+                    v.clearFocus();
+                    ((InputMethodManager) AuthActivity.this.getSystemService(Context.INPUT_METHOD_SERVICE))
+                            .hideSoftInputFromWindow(v.getWindowToken(), 0);
+
                     attemptAuth();
                     return true;
                 }
