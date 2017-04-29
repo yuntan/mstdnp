@@ -101,7 +101,9 @@ public class MetadataService extends NotificationListenerService
 
         // show notification
         Notification.Builder builder = new Notification.Builder(this)
-                .setSmallIcon(R.drawable.notification_icon)
+                .setSmallIcon(enabled
+                        ? R.drawable.ic_notification_enabled
+                        : R.drawable.ic_notification_disabled)
                 .setContentTitle(getText(enabled
                         ? R.string.notify_title_enabled
                         : R.string.notify_title_disabled))
@@ -122,7 +124,7 @@ public class MetadataService extends NotificationListenerService
                 .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
         pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         Notification.Action action = new Notification.Action.Builder(
-                R.drawable.notification_icon,
+                enabled ? R.drawable.ic_notification_disabled : R.drawable.ic_notification_enabled,
                 getText(enabled ? R.string.action_disable : R.string.action_enable),
                 pendingIntent).build();
         builder.addAction(action);

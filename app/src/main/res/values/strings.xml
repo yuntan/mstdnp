@@ -23,6 +23,7 @@
     <!-- Strings related to pref -->
     <string name="pref_title_enabled">Auto toot</string>
     <string name="pref_title_scope">Scope</string>
+    <string name="content_desc_mstdnp_logo">mstdnp logo</string>
     <string-array name="pref_scope_entries">
         <item>🌏 Public</item>
         <item>🔓 Unlisted</item>
