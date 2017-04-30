@@ -34,16 +34,20 @@ public class SettingsActivity extends FragmentActivity {
 
         PreferenceManager.setDefaultValues(this, R.xml.pref_main, false);
 
-        // start MetadataService
-        Intent intent = new Intent(this, MetadataService.class);
-        startService(intent);
-
         if (!_appStatus.permissionCheckCompleted) {
             DialogFragment dialog = new OpenSettingDialogFragment();
             dialog.show(getSupportFragmentManager(), TAG);
         }
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // start MetadataService
+        Intent intent = new Intent(this, MetadataService.class);
+        startService(intent);
+    }
 
     public static class SettingsFragment extends PreferenceFragment {
         @Override
