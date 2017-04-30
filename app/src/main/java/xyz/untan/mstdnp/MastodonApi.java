@@ -24,7 +24,8 @@ class MastodonApi {
         String url = "https://" + host + "/api/v1/apps"
                 + "?client_name=mstdnp"
                 + "&redirect_uris=mstdnp%3A%2F%2Fauthorize"
-                + "&scopes=write";
+                + "&scopes=write"
+                + "&website=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dxyz.untan.mstdnp";
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST, url, null, listener, errListener);
