@@ -18,7 +18,7 @@ plugins {
  * Android Gradle Plugin)
  */
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(17)
 }
 
 /**
@@ -127,13 +127,13 @@ android {
      * same version for these values and kotlin.jvmToolchain, you can
      * remove these blocks.
      */
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+//    compileOptions {
+//        sourceCompatibility = JavaVersion.VERSION_1_8
+//        targetCompatibility = JavaVersion.VERSION_1_8
+//    }
+//    kotlinOptions {
+//        jvmTarget = "1.8"
+//    }
 
 //    buildFeatures {
 //        compose = true
