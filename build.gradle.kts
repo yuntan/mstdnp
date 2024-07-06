@@ -1,7 +1,7 @@
 plugins {
 
     /**
-     * Use `apply false` in the top-level build.gradle_ file to add a Gradle
+     * Use `apply false` in the top-level build.gradle.kts file to add a Gradle
      * plugin as a build dependency but not apply it to the current (root)
      * project. Don't use `apply false` in sub-projects. For more information,
      * see Applying external plugins with same version to subprojects.
