@@ -1,6 +1,7 @@
 package xyz.untan.mstdnp;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
@@ -15,16 +16,18 @@ import android.media.session.MediaController;
 import android.media.session.MediaSession;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.service.notification.NotificationListenerService;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -155,7 +158,7 @@ public class MetadataService extends NotificationListenerService
                 .getBoolean(SettingsActivity.KEY_ENABLED, true);
 
         // show notification
-        Notification.Builder builder = new Notification.Builder(this)
+        Notification.Builder builder = new Notification.Builder(this, "default")
                 .setSmallIcon(enabled
                         ? R.drawable.ic_notification_enabled
                         : R.drawable.ic_notification_disabled)
@@ -164,29 +167,51 @@ public class MetadataService extends NotificationListenerService
                         : R.string.notify_title_disabled))
                 .setContentText(getText(R.string.notify_text));
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder = builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+
         // tap to open settings activity
         Intent intent = new Intent(this, SettingsActivity.class);
         PendingIntent pendingIntent = TaskStackBuilder.create(this)
                 .addNextIntent(intent)
-                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-        builder.setContentIntent(pendingIntent);
+                .getPendingIntent(
+                        0,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+        builder = builder.setContentIntent(pendingIntent);
 
         // add button to enable/disable auto toot
         intent = new Intent(this, AutoTootPrefReceiver.class)
                 .putExtra(enabled ? "disable" : "enable", true);
-        pendingIntent = TaskStackBuilder.create(this)
-                .addNextIntent(intent)
-                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-        pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+//        pendingIntent = TaskStackBuilder.create(this)
+//                .addNextIntent(intent)
+//                .getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        pendingIntent = PendingIntent.getBroadcast(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
         Notification.Action action = new Notification.Action.Builder(
                 enabled ? R.drawable.ic_notification_disabled : R.drawable.ic_notification_enabled,
                 getText(enabled ? R.string.action_disable : R.string.action_enable),
-                pendingIntent).build();
-        builder.addAction(action);
+                pendingIntent
+        ).build();
+        builder = builder.addAction(action);
 
         Notification notification = builder.build();
+
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        NotificationChannel channel = new NotificationChannel(
+                "default",
+                "mstdnp toot posting service",
+                NotificationManager.IMPORTANCE_LOW
+        );
+        notificationManager.createNotificationChannel(channel);
+
         notificationManager.notify(_notifyId, notification);
         return notification;
     }

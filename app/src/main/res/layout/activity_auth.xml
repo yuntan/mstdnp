@@ -25,11 +25,11 @@
             android:padding="32dp"
             app:srcCompat="@drawable/ic_mstdnp_logo" />
 
-        <android.support.design.widget.TextInputLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edit_instance"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -41,7 +41,8 @@
                 android:maxLines="1"
                 android:selectAllOnFocus="true"
                 android:text="@string/text_default_instance" />
-        </android.support.design.widget.TextInputLayout>
+
+        </com.google.android.material.textfield.TextInputLayout>
 
         <Button
             android:id="@+id/button_next"

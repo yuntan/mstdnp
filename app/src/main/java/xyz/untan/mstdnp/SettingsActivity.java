@@ -1,17 +1,23 @@
 package xyz.untan.mstdnp;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AlertDialog;
+import android.util.Log;
+
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.appcompat.app.AlertDialog;
 
 
 public class SettingsActivity extends FragmentActivity {
@@ -38,6 +44,15 @@ public class SettingsActivity extends FragmentActivity {
             DialogFragment dialog = new OpenSettingDialogFragment();
             dialog.show(getSupportFragmentManager(), TAG);
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && this.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            this.requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+
+//            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+//                Log.i(TAG, "permission " + (isGranted ? "GRANTED" : "DENIED"));
+//            });
+        }
     }
 
     @Override
@@ -46,7 +61,7 @@ public class SettingsActivity extends FragmentActivity {
 
         // start MetadataService
         Intent intent = new Intent(this, MetadataService.class);
-        startService(intent);
+        startForegroundService(intent);
     }
 
     public static class SettingsFragment extends PreferenceFragment {

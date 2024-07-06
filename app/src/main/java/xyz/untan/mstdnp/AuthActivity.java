@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -13,12 +12,12 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
-import com.os.operando.garum.Configuration;
-import com.os.operando.garum.Garum;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -37,10 +36,6 @@ public class AuthActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_auth);
 
-//        Garum.initialize(getApplicationContext());    // Why not works?
-        Configuration.Builder builder = new Configuration.Builder(getApplicationContext());
-        builder.setModelClasses(AppStatus.class);
-        Garum.initialize(builder.create(), true);
         _appStatus = new AppStatus();
 
         _instanceView = (EditText) findViewById(R.id.edit_instance);
